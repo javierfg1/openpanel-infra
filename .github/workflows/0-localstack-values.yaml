@@ -1,0 +1,42 @@
+image:
+  repository: localstack/localstack
+  tag: "3.4.0"  # Asegúrate de usar una versión fija, NO latest
+
+# Variables de entorno de LocalStack
+env:
+  SERVICES: s3,dynamodb,sqs,cloudwatch
+  DEBUG: "1"
+  ACTIVATE_PRO: "0" # <--- Forzar modo community
+  HOSTNAME_EXTERNAL: milocalstack.local
+  CORS_ALLOW_ORIGIN: "*"
+  DEFAULT_REGION: us-east-1
+  LOCALSTACK_AUTH_TOKEN: ""
+    
+# Desactiva funciones que el chart activa por defecto para Pro
+pro:
+  enabled: false
+
+
+# Service interno (el Ingress apuntará aquí)
+service:
+  type: ClusterIP
+  port: 4566
+  targetPort: 4566
+
+# Persistencia (opcional pero recomendable)
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 5Gi
+  mountPath: /var/lib/localstack
+
+# Recursos (ajusta si es necesario)
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+

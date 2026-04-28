@@ -89,40 +89,36 @@ export AWS_SECRET_ACCESS_KEY=test
 export AWS_DEFAULT_REGION=us-east-1
 
 aws s3api create-bucket \
-  --bucket la-huella-remote-state \
+  --bucket openpanel-remote-state \
   --region us-east-1 \
-  --endpoint-url=http://midominio.local
+  --endpoint-url=http://milocalstack.local:4566
 
-
-[javi@localhost la-huella-terraform]$ aws s3api create-bucket   --bucket la-huella-remote-state   --region us-east-1   --endpoint-url=http://midominio.local
+[javi@localhost openpanel-infr]$ aws s3api create-bucket   --bucket openpanel-remote-state   --region us-east-1   --endpoint-url=http://milocalstack.local:4566
 {
-    "Location": "/la-huella-remote-state"
+    "Location": "/openpanel-remote-state"
 }
 
-
-aws s3 ls --endpoint-url=http://midominio.local
-
-[javi@localhost la-huella-terraform]$ aws s3 ls --endpoint-url=http://midominio.local
-2026-01-06 09:07:33 la-huella-remote-state
+[javi@localhost openpanel-infr]$ aws s3 ls --endpoint-url=http://milocalstack.local:4566
+2026-04-28 14:29:08 openpanel-remote-state
 
 
 # (Opcional pero recomendable) Crear la tabla DynamoDB para locking
 
 aws dynamodb create-table \
-  --table-name terraform-locks \
+  --table-name terraform-op-locks \
   --attribute-definitions AttributeName=LockID,AttributeType=S \
   --key-schema AttributeName=LockID,KeyType=HASH \
   --billing-mode PAY_PER_REQUEST \
-  --endpoint-url=http://midominio.local
+  --endpoint-url=http://milocalstack.local:4566
 
-
-
-[javi@localhost la-huella-terraform]$ aws dynamodb create-table \
-  --table-name terraform-locks \
+[javi@localhost openpanel-infr]$ aws s3 ls --endpoint-url=http://milocalstack.local:4566
+2026-04-28 14:29:08 openpanel-remote-state
+[javi@localhost openpanel-infr]$ aws dynamodb create-table \
+  --table-name terraform-op-locks \
   --attribute-definitions AttributeName=LockID,AttributeType=S \
   --key-schema AttributeName=LockID,KeyType=HASH \
   --billing-mode PAY_PER_REQUEST \
-  --endpoint-url=http://midominio.local
+  --endpoint-url=http://milocalstack.local:4566
 {
     "TableDescription": {
         "AttributeDefinitions": [
@@ -131,7 +127,7 @@ aws dynamodb create-table \
                 "AttributeType": "S"
             }
         ],
-        "TableName": "terraform-locks",
+        "TableName": "terraform-op-locks",
         "KeySchema": [
             {
                 "AttributeName": "LockID",
@@ -139,7 +135,7 @@ aws dynamodb create-table \
             }
         ],
         "TableStatus": "ACTIVE",
-        "CreationDateTime": "2026-01-06T09:09:13.060000+01:00",
+        "CreationDateTime": "2026-04-28T14:35:15.275000+02:00",
         "ProvisionedThroughput": {
             "LastIncreaseDateTime": "1970-01-01T01:00:00+01:00",
             "LastDecreaseDateTime": "1970-01-01T01:00:00+01:00",
@@ -149,23 +145,22 @@ aws dynamodb create-table \
         },
         "TableSizeBytes": 0,
         "ItemCount": 0,
-        "TableArn": "arn:aws:dynamodb:us-east-1:000000000000:table/terraform-locks",
-        "TableId": "090bc1e7-fadb-4b9c-b57d-0a7f789b8dde",
+        "TableArn": "arn:aws:dynamodb:us-east-1:000000000000:table/terraform-op-locks",
+        "TableId": "7016942b-c189-42d4-879a-779a4df1d5af",
         "BillingModeSummary": {
             "BillingMode": "PAY_PER_REQUEST",
-            "LastUpdateToPayPerRequestDateTime": "2026-01-06T09:09:13.060000+01:00"
+            "LastUpdateToPayPerRequestDateTime": "2026-04-28T14:35:15.275000+02:00"
         },
         "DeletionProtectionEnabled": false
     }
 }
 
+aws dynamodb list-tables --endpoint-url=http://milocalstack.local:4566
 
-aws dynamodb list-tables --endpoint-url=http://midominio.local
-
-[javi@localhost la-huella-terraform]$ aws dynamodb list-tables --endpoint-url=http://midominio.local
+javi@localhost openpanel-infr]$ aws dynamodb list-tables --endpoint-url=http://milocalstack.local:4566
 {
     "TableNames": [
-        "terraform-locks"
+        "terraform-op-locks"
     ]
 }
 
@@ -182,23 +177,21 @@ Claves importantes aquí:
 
 # Inicializar el backend remoto
 
-terraform init
-
-
-[javi@localhost la-huella-terraform]$ terraform fmt -write=false *.tf
+[javi@localhost terraform]$ terraform fmt -write=false *.tf
 backend.tf
+main.tf
+outputs.tf
 providers.tf
-[javi@localhost la-huella-terraform]$ terraform init
+
+
+[javi@localhost terraform]$ terraform init
 
 Initializing the backend...
 
-Successfully configured the backend "s3"! Terraform will automatically
-use this backend unless the backend configuration changes.
-
 Initializing provider plugins...
 - Finding latest version of hashicorp/aws...
-- Installing hashicorp/aws v6.27.0...
-- Installed hashicorp/aws v6.27.0 (signed by HashiCorp)
+- Installing hashicorp/aws v6.42.0...
+- Installed hashicorp/aws v6.42.0 (signed by HashiCorp)
 
 Terraform has created a lock file .terraform.lock.hcl to record the provider
 selections it made above. Include this file in your version control repository
@@ -215,6 +208,7 @@ If you ever set or change modules or backend configuration for Terraform,
 rerun this command to reinitialize your working directory. If you forget, other
 commands will detect it and remind you to do so if necessary.
 
+
 # terraform apply
 
 Con este comando se gurada el fichero de estado en el bucket
@@ -230,14 +224,14 @@ Apply complete! Resources: 0 added, 0 changed, 0 destroyed.
 
 # Verfificación
 
-aws s3 ls --endpoint-url=http://midominio.local --region us-east-1
+aws s3 ls --endpoint-url=http://milocastack.local --region us-east-1
 
-[javi@localhost la-huella-terraform]$ aws s3 ls --endpoint-url=http://midominio.local --region us-east-1
+[javi@localhost la-huella-terraform]$ aws s3 ls --endpoint-url=http://milocastack.local --region us-east-1
 2026-01-06 09:07:33 la-huella-remote-state
 
-aws dynamodb scan --table-name terraform-locks --endpoint-url=http://midominio.local --region us-east-1
+aws dynamodb scan --table-name terraform-locks --endpoint-url=http://milocastack.local --region us-east-1
 
-[javi@localhost la-huella-terraform]$ aws dynamodb scan --table-name terraform-locks --endpoint-url=http://midominio.local --region us-east-1
+[javi@localhost la-huella-terraform]$ aws dynamodb scan --table-name terraform-locks --endpoint-url=http://milocastack.local --region us-east-1
 {
     "Items": [],
     "Count": 0,
@@ -245,13 +239,13 @@ aws dynamodb scan --table-name terraform-locks --endpoint-url=http://midominio.l
     "ConsumedCapacity": null
 }
 
-[javi@localhost la-huella-terraform]$ aws s3 ls s3://la-huella-remote-state/mission7/   --endpoint-url=http://midominio.local   --region us-east-1
+[javi@localhost la-huella-terraform]$ aws s3 ls s3://la-huella-remote-state/mission7/   --endpoint-url=http://milocastack.local   --region us-east-1
 2026-01-06 19:43:53        180 terraform.tfstate
 
 javi@localhost la-huella-terraform]$ aws s3 cp \
   s3://la-huella-remote-state/mission7/terraform.tfstate \
   /tmp/terraform.tfstate \
-  --endpoint-url=http://midominio.local \
+  --endpoint-url=http://milocastack.local \
   --region us-east-1
 download: s3://la-huella-remote-state/mission7/terraform.tfstate to ../../../../../../tmp/terraform.tfstate
 
@@ -422,7 +416,7 @@ Ver si hay lock activo:
 
 aws dynamodb scan \
   --table-name terraform-locks \
-  --endpoint-url=http://midominio.local \
+  --endpoint-url=http://milocastack.local \
   --region us-east-1
 
 
@@ -431,7 +425,7 @@ Borrar lock activo:
 aws dynamodb delete-item \
   --table-name terraform-locks \
   --key '{"LockID":{"S":"mission7/terraform.tfstate"}}' \    ##### Poner el LockID que toque.                                
-  --endpoint-url=http://midominio.local \
+  --endpoint-url=http://milocastack.local \
   --region us-east-1
 
 DEspués de borrar el lock activo:

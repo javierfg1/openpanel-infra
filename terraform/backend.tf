@@ -1,12 +1,12 @@
 terraform {
   backend "s3" {
-    bucket                      = "la-huella-remote-state"
-    key                         = "mission7/terraform.tfstate"
+    bucket                      = "openpanel-remote-state"
+    key                         = "openpanel/terraform.tfstate"
     region                      = "us-east-1"
-    endpoint                    = "http://midominio.local"
-    dynamodb_endpoint           = "http://midominio.local"
+    endpoint                    = "http://milocalstack.local:4566"
+    dynamodb_endpoint           = "http://milocalstack.local:4566"
 
-    dynamodb_table              = "terraform-locks"
+    dynamodb_table              = "terraform-op-locks"
 
     access_key                  = "test"
     secret_key                  = "test"

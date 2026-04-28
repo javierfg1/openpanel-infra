@@ -1,0 +1,108 @@
+name: La Huella Pipeline Definitivo
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  la-huella-def-job:
+    runs-on: self-hosted   # runner propio
+
+    env:
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      LOCALSTACK_ENDPOINT: http://milocalstack.local:4566
+      USER: javi
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Comprobar k3s instalado
+        run: |
+          if ! command -v k3s >/dev/null; then
+            curl -sfL https://get.k3s.io | sh -
+          fi
+
+      - name: Exportar kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+          sudo chown $USER:$USER ~/.kube/config
+
+      - name: Esperar cluster Ready
+        run: kubectl wait --for=condition=Ready nodes --all --timeout=120s
+
+
+      - name: Añadir LocalStack Helm repo
+        run: |
+          helm repo add localstack https://localstack.github.io/helm-charts
+          helm repo update
+
+      - name: Desplegar LocalStack
+        run: |
+          helm upgrade --install localstack localstack/localstack -f 0-localstack-values.yaml -n localstack
+
+      - name: Esperar LocalStack levantado
+        run: |
+          until curl -s $LOCALSTACK_ENDPOINT/_localstack/health; do
+            sleep 5
+          done
+
+      - name: Instalar Ingress para LocalStack
+        run: kubectl apply -f 0-ingress-localstack.yaml -n mission7
+
+      - name: Crear Terraform state bucket (si no existe)
+        run: |
+          aws s3 mb s3://la-huella-remote-state \
+            --endpoint-url=$LOCALSTACK_ENDPOINT || true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init -reconfigure
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      - name: Inicalización de recursos (solo si es necesario)
+        run: |
+          chmod +x scripts/init.sh
+          ./scripts/init.sh
+
+      - name: Lanzar application deploy workflow
+        env:
+          GH_TOKEN: ${{ secrets.GH_APP_TOKEN }}
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/repos/la-huella/eu-devops-7-la-huella-main-etapa4/actions/workflows/la-huella-wf-app.yaml/dispatches \
+            -d '{"ref":"main"}'
+
+      - name: Verificar recursos en Localstack
+        run: |
+          echo "Verificando S3..."
+          aws --endpoint-url=$LOCALSTACK_ENDPOINT s3 ls --region $AWS_REGION
+
+          echo "Verificando DynamoDB..."
+          aws --endpoint-url=$LOCALSTACK_ENDPOINT dynamodb list-tables --region $AWS_REGION
+
+
+      - name: Comprobar que la app está ready
+        run: |
+          echo "Waiting for app at http://172.27.0.1/ ..."
+          for i in {1..30}; do
+            if curl -sf http://172.27.0.1/ > /dev/null; then
+              echo "✅ App is up"
+              exit 0
+            fi
+            echo "⏳ Not ready yet... retrying"
+            sleep 5
+          done
+          echo "❌ App did not become ready in time"
+          exit 1
