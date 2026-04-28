@@ -1,51 +1,53 @@
-resource "aws_vpc" "vpc" {
-  cidr_block           = var.vpc-cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+resource "aws_s3_bucket" "la_huella_sentiment_reports" {
+  bucket = "la-huella-sentiment-reports"
+}
 
-  tags = {
-    Name = "${var.prefix}-vpc"
+resource "aws_s3_bucket" "la_huella_uploads" {
+  bucket = "la-huella-uploads"
+}
+
+resource "aws_dynamodb_table" "la_huella_comments" {
+  name         = "la-huella-comments"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
   }
 }
 
-data "aws_availability_zones" "available" {
-  state = "available"
-}
+resource "aws_dynamodb_table" "la_huella_products" {
+  name         = "la-huella-products"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
 
-resource "aws_subnet" "public" {
-  count                   = min(3,length(data.aws_availability_zones.available.names))
-  vpc_id                  = aws_vpc.vpc.id
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
-  cidr_block              = cidrsubnet(aws_vpc.vpc.cidr_block, 8, count.index)
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "${var.prefix}-subnet-public-${data.aws_availability_zones.available.names[count.index]}"
-    Tier = "public"
+  attribute {
+    name = "id"
+    type = "S"
   }
 }
 
-resource "aws_security_group" "web" {
-  name        = "web_sg"
-  description = "Allow HTTP inbound traffic"
-  vpc_id      = aws_vpc.vpc.id
+resource "aws_dynamodb_table" "la_huella_analytics" {
+  name         = "la-huella-analytics"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
 
-  ingress {
-    description = "Web security group."
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = [aws_vpc.vpc.cidr_block]
+  attribute {
+    name = "id"
+    type = "S"
   }
+}
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+resource "aws_sqs_queue" "la_huella_processing_queue" {
+  name = "la-huella-processing-queue"
+}
 
-  tags = {
-    Name = "${var.prefix}-web-sg"
-  }
+resource "aws_sqs_queue" "la_huella_notifications_queue" {
+  name = "la-huella-notifications-queue"
+}
+
+resource "aws_cloudwatch_log_group" "la_huella_aplication" {
+  name              = "/la-huella-aplication"
+  retention_in_days = 30
 }

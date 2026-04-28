@@ -1,13 +1,13 @@
 variable "prefix" {
   description = "Prefix of the name of the created resources"
   type        = string
-  default     = "gitops-my"
+  default     = "openpanel"
 }
 
 variable "region" {
   description = "The selected AWS region for the VPC"
   type        = string
-  default     = "us-east-1"
+  default     = "eu-west-1"
 }
 
 variable "vpc-cidr" {
